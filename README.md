@@ -16,6 +16,11 @@ Then register the iracket kernel with IPython/Jupyter:
 ```bash
 racket -l iracket/install
 ```
+If you want to register additional `#lang`s you can do so via:
+```bash
+racket -l iracket/install -- -l "#lang racket/base" -l "#lang at-exp racket"
+```
+Note that only `#lang`s with `#%top-interaction` support will work.
 
 # Requirements
 

@@ -38,7 +38,6 @@
                                           (raise-syntax-error 'bad-lang
                                                               (format "bad lang line ~a" lang-line)))]
                           [else (raise-syntax-error 'bad-lang (format "bad lang line ~a" lang-line))]))))
-  (displayln `(asdf: ,meta-lang ,lang))
   (define cfg (with-input-from-file config-file-path ipy:read-config))
   (parameterize ([ipy:connection-key (ipy:config-key cfg)]
                  [sandbox-eval-limits (list #f #f)]
