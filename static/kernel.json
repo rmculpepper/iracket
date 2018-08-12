@@ -1,5 +1,5 @@
 {
- "argv": ["racket", "-t", "IRACKET_SRC_DIR/iracket.rkt", "-m", "{connection_file}"],
+ "argv": ["racket", "-t", "IRACKET_SRC_DIR/iracket.rkt", "-m", "{connection_file}", "#lang racket"],
  "display_name": "Racket",
  "language": "racket"
 }

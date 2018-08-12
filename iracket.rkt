@@ -4,6 +4,7 @@
 ;; You probably don't want to run this directly.
 
 (require racket/list
+         racket/string
          racket/contract
          racket/sandbox
          "private/iracket-execute.rkt"
@@ -17,10 +18,27 @@
 
 (provide main)
 
-(define (main config-file-path)
+(define (main config-file-path lang-line)
   ;; ipython hides stdout, but prints stderr, so this is for debugging
   (current-output-port (current-error-port))
-  (display "Kernel starting.\n")
+  (display (format "Kernel starting ~a.\n" lang-line))
+  (define-values (meta-lang lang)
+    (apply values (let* ([slist (string-split lang-line)]
+                         [lenl (length slist)])
+                    (cond [(= lenl 0) (list null 'racket)]
+                          [(= lenl 1) (if (equal? (car slist) "#lang")
+                                          (list null 'racket)
+                                          (list null (string->symbol (car slist))))]
+                          [(= lenl 2) (if (equal? (car slist) "#lang")
+                                          (list null (string->symbol (cadr slist)))
+                                          (raise-syntax-error 'bad-lang
+                                                              (format "bad lang line ~a" lang-line)))]
+                          [(= lenl 3) (if (equal? (car slist) "#lang")
+                                          (list (string->symbol (cadr slist)) (string->symbol (caddr slist)))
+                                          (raise-syntax-error 'bad-lang
+                                                              (format "bad lang line ~a" lang-line)))]
+                          [else (raise-syntax-error 'bad-lang (format "bad lang line ~a" lang-line))]))))
+  (displayln `(asdf: ,meta-lang ,lang))
   (define cfg (with-input-from-file config-file-path ipy:read-config))
   (parameterize ([ipy:connection-key (ipy:config-key cfg)]
                  [sandbox-eval-limits (list #f #f)]
@@ -28,7 +46,14 @@
                  [sandbox-propagate-exceptions #f]
                  [sandbox-namespace-specs (list sandbox-make-namespace 'file/convertible)]
                  [sandbox-path-permissions (list (list 'read "/"))])
-    (define e (make-evaluator '(begin)))
+    (define e (make-evaluator lang
+                              (begin (println meta-lang) '(void))
+                              (if (eqv? meta-lang 'at-exp)
+                                  '(require (only-in scribble/reader use-at-readtable))
+                                  '(void))
+                              (if (eqv? meta-lang 'at-exp)
+                                  '(use-at-readtable)
+                                  '(void))))
     (ipy:call-with-services cfg (λ (services) (work cfg services e))))
   (display "Kernel terminating.\n"))
 
