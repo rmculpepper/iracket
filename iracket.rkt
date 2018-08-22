@@ -24,7 +24,7 @@
   (define cfg (with-input-from-file config-file-path ipy:read-config))
   (parameterize ([ipy:connection-key (ipy:config-key cfg)]
                  [sandbox-eval-limits (list #f #f)]
-                 #;[sandbox-memory-limit 200]
+                 [sandbox-memory-limit #f]
                  [sandbox-propagate-exceptions #f]
                  [sandbox-namespace-specs (list sandbox-make-namespace 'file/convertible)]
                  [sandbox-path-permissions (list (list 'read "/"))])
