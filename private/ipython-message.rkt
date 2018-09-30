@@ -63,7 +63,7 @@
 (define-struct/contract header
   ([identifiers (listof bytes?)]
    [parent-header any/c] ;; (recursive-contract (or/c false/c header?))]
-   [metadata (hash/c string? string?)]
+   [metadata jsexpr?] ;; TODO hash table?
    [message-id string?] ;; uuid-string?
    [session-id string?] ;; uuid-string?
    [username string?]
