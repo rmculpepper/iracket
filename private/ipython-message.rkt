@@ -18,6 +18,7 @@
 	   'comm_info_request
            'execute_request
            'complete_request
+           'is_complete_request
            'object_info_request
            'shutdown_request
            'history_request))
@@ -27,6 +28,7 @@
 	   'comm_info_reply
            'execute_reply
            'complete_reply
+           'is_complete_reply
            'object_info_reply
            'shutdown_reply
            'history_reply
@@ -88,6 +90,7 @@
     [(comm_info_request) 'comm_info_reply]
     [(execute_request) 'execute_reply]
     [(complete_request) 'complete_reply]
+    [(is_complete_request) 'is_complete_reply]
     [(object_info_request) 'object_info_reply]
     [(shutdown_request) 'shutdown_reply]
     [(history_request) 'history_reply]

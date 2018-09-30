@@ -47,6 +47,7 @@
    complete
    connect
    kernel-info
+   is-complete-request
    comm-info
    shutdown)
   #:transparent)
@@ -57,6 +58,7 @@
    (λ (msg) (complete e msg))
    (λ (_msg) (connect cfg))
    (λ (_msg) kernel-info)
+   (λ (msg) (is-complete-request e msg))
    (λ (_msg) comm-info)
    (λ (_msg) (hasheq 'restart #f))))
 
@@ -68,6 +70,7 @@
       [(comm_info_request) handlers-comm-info]
       [(connect_request) handlers-connect]
       [(execute_request) handlers-execute]
+      [(is_complete_request) handlers-is-complete-request]
       [(complete_request) handlers-complete]
       [(shutdown_request) handlers-shutdown]
       [else

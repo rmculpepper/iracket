@@ -10,13 +10,21 @@
          (prefix-in ipy: "ipython-services.rkt")
          (prefix-in ipy: "ipython.rkt"))
 
-(provide complete)
+(provide complete is-complete-request)
 
 ;; complete_request
 (define/contract (string-prefix? prefix word)
   (string? string? . -> . boolean?)
   (define len (string-length prefix))
   (equal? prefix (substring word 0 (min (string-length word) len))))
+
+;; TODO
+(define/contract (is-complete-request e msg)
+  (any/c ipy:message? . -> . jsexpr?)
+  (define code (hash-ref (ipy:message-content msg) 'code))
+  (hasheq
+   'status "unknown"
+   ))
 
 (define/contract (complete e msg)
   (any/c ipy:message? . -> . jsexpr?)
