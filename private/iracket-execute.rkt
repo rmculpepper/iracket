@@ -78,6 +78,13 @@
     (parameterize ([current-custodian cust])
       (kill-thread t))))
 
+;;
+;(define/contract (input-reply msg)
+ ; (any/c ipy:message? . -> . jsexpr?)
+  ;(define code (hash-ref (ipy:message-content msg) 'value))
+  ;(+ 1 2)
+  ;)
+
 (define (make-execute services e)
   (define execution-count 0)
   (define user-cust (get-user-custodian e))
@@ -90,8 +97,10 @@
   (λ (msg)
     (set! execution-count (add1 execution-count))
     (define code (hash-ref (ipy:message-content msg) 'code))
+    (define allow-stdin (hash-ref (ipy:message-content msg) 'allow_stdin))
     (call-in-sandbox-context e
      (λ ()
+       (when allow-stdin (current-input-port (ipy:make-stdin-port services msg)))
        (current-output-port (ipy:make-stream-port services 'stdout msg))
        (current-error-port (ipy:make-stream-port services 'stderr msg))))
     (call-with-values
