@@ -105,7 +105,7 @@
                      ;; Return value:
                      (if (<= bytes-required bytes-available) 
                          (read-into-string s bytes-required) 
-                         eof)); TODO evt
+                         eof)); 
                    #f
                    void)
   )
@@ -116,11 +116,6 @@
 (define (make-stdin-port services msg [name #f])
   (make-reader (λ () (curry request-stdin-from-frontend msg services)))
 )
- ; (define-values (pin pout) (make-pipe (stdin-buffer-size) name name))
-  ;(thread (lambda ()
-    ;        (request-stdin-response msg services pout worker)
-   ;         (close-output-port pout)))
-  ;pin)
 
 (define/contract (make-stream-port services name orig-msg)
   (services? (symbols 'stdout 'stderr) message? . -> . output-port?)
