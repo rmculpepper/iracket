@@ -78,13 +78,6 @@
     (parameterize ([current-custodian cust])
       (kill-thread t))))
 
-;;
-;(define/contract (input-reply msg)
- ; (any/c ipy:message? . -> . jsexpr?)
-  ;(define code (hash-ref (ipy:message-content msg) 'value))
-  ;(+ 1 2)
-  ;)
-
 (define (make-execute services e)
   (define execution-count 0)
   (define user-cust (get-user-custodian e))
