@@ -51,9 +51,9 @@
           [fail-ok? #f]
           [else (raise-user-error "Cannot find jupyter data directory.")])))
 
-(define (get-racket-kernel-dir [fail-ok? #f])
+(define (get-lang-kernel-dir lang [fail-ok? #f])
   (define jupyter-dir (get-jupyter-dir fail-ok?))
-  (and jupyter-dir (build-path jupyter-dir "kernels" "racket")))
+  (and jupyter-dir (build-path jupyter-dir "kernels" lang)))
 
 ;; ============================================================
 ;; Commands
@@ -100,7 +100,7 @@
     (printf "Jupyter executable: ~v\n" (path->string jupyter))
     (define jupyter-dir (get-jupyter-dir))
     (printf "Jupyter data directory: ~v\n" (path->string jupyter-dir))
-    (define kernel-dir (get-racket-kernel-dir))
+    (define kernel-dir (get-lang-kernel-dir "racket"))
     (define kernel-path (build-path kernel-dir "kernel.json"))
     (printf "IRacket kernel file: ~v\n" (path->string kernel-path))
     (printf "  kernel file exists?: ~a\n" (yn (file-exists? kernel-path)))
@@ -134,6 +134,7 @@
 
 (define (cmd:install args)
   (define racket-command 'auto)
+  (define langs (make-parameter '("racket")))
   (command-line
    #:program (short-program+command-name)
    #:argv args
@@ -153,41 +154,49 @@
    [("--auto-racket-exe")
     "Use `racket`, but only if it is in the executable search path"
     (set! racket-command 'auto)]
+   #:multi
+   [("-l") lang
+    "Add #lang lines as additional kernels"
+    (langs (cons lang (langs)))]
    #:help-labels
    "Meta options:"
    #:args ()
-   (do-install-iracket! racket-command)))
+   (do-install-iracket! (langs) racket-command)))
 
 (define (install-iracket! #:jupyter-exe [jupyter-exe #f]
                           #:racket-exe [racket-exe #f])
   (parameterize ((*use-jupyter-exe* jupyter-exe))
-    (do-install-iracket! racket-exe)))
+    (do-install-iracket! ("racket") racket-exe)))
 
-(define (do-install-iracket! [racket-exe #f])
-  (let ([racket-exe (resolve-racket-exe racket-exe)])
-    (write-iracket-kernel-json! racket-exe)
-    (for ([file (in-list other-static-files)])
-      (define dest-file (build-path (get-racket-kernel-dir) (file-name-from-path file)))
-      (copy-file file dest-file #t))
-    (put-pref 'installed (list (path->string (get-jupyter-dir))))))
+(define (do-install-iracket! langs [racket-exe #f])
+  (define (make-kernel lang)
+    (let ([racket-exe (resolve-racket-exe racket-exe)])
+         (write-iracket-kernel-json! racket-exe lang)
+         (for ([file (in-list other-static-files)])
+           (define dest-file (build-path (get-lang-kernel-dir lang) (file-name-from-path file)))
+           (copy-file file dest-file #t))
+         (put-pref 'installed (list (path->string (get-jupyter-dir))))))
+  (for-each make-kernel langs))
 
-(define (write-iracket-kernel-json! racket-exe)
-  (define racket-kernel-dir (get-racket-kernel-dir))
-  (make-directory* racket-kernel-dir)
-  (define kernel-json (make-kernel-json racket-exe))
-  (define dest-file (build-path racket-kernel-dir "kernel.json"))
+(define (write-iracket-kernel-json! racket-exe lang)
+  (define lang-kernel-dir (get-lang-kernel-dir lang))
+  (make-directory* lang-kernel-dir)
+  (define kernel-json (make-kernel-json racket-exe lang))
+  (define dest-file (build-path lang-kernel-dir "kernel.json"))
   (when (file-exists? dest-file)
     (printf "Replacing old ~s\n" (path->string dest-file)))
   (with-output-to-file dest-file #:exists 'replace
     (lambda () (write-json kernel-json)))
-  (printf "Kernel installed in ~s\n" (path->string racket-kernel-dir)))
+  (printf "Kernel installed in ~s\n" (path->string lang-kernel-dir)))
 
-(define (make-kernel-json racket-exe)
+(define (make-kernel-json racket-exe lang)
+  (define lang-line (string-append "#lang " lang))
   (hash 'argv `(,(path->string racket-exe)
                 "-l" "iracket/iracket"
-                "--" "{connection_file}")
-        'display_name "Racket"
-        'language "racket"))
+                "--" "{connection_file}"
+                ,lang-line)
+        'display_name lang
+        'language lang))
 
 (define (resolve-racket-exe racket-exe)
   (cond [(path-string? racket-exe)

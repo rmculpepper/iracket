@@ -4,16 +4,17 @@
 ;; You probably don't want to run this directly.
 
 (require racket/list
+         racket/string
          racket/contract
          racket/sandbox
          "private/kernel.rkt"
          "private/jupyter.rkt")
 
-(define (start-kernel config-file-path)
+(define (start-kernel config-file-path lang-line)
   ;; Jupyter hides stdout, but prints stderr, so use eprintf for debugging.
   (eprintf "Kernel starting.\n")
   (define cfg (with-input-from-file config-file-path read-config))
-  (define evaluator (call-with-kernel-sandbox-configuration make-racket-evaluator))
+  (define evaluator (call-with-kernel-sandbox-configuration make-racket-evaluator lang-line))
   (run-kernel cfg
               (lambda (services)
                 (hasheq 'kernel_info_request (lambda (msg) kernel-info)
@@ -26,7 +27,7 @@
 ;; "trusted" configuration (for example, we do want to wrap the exit handler, we
 ;; probably want some security guard checks by default, etc; cf
 ;; call-with-trusted-sandbox-configuration).
-(define (call-with-kernel-sandbox-configuration proc)
+(define (call-with-kernel-sandbox-configuration proc lang-line)
   (parameterize (;; -- Same as default:
                  ;; [sandbox-propagate-breaks #t]
                  ;; [sandbox-override-collection-paths '()]
@@ -47,10 +48,26 @@
                  [sandbox-propagate-exceptions #f] ;; default = #t -- FIXME?
                  [sandbox-namespace-specs (cons sandbox-make-namespace '(file/convertible))]
                  [sandbox-path-permissions '((read "/"))])
-    (proc)))
+    (proc lang-line)))
 
-(define (make-racket-evaluator)
-  (make-evaluator '(begin)))
+(define (make-racket-evaluator lang-line)
+  (define-values (meta-lang lang)
+    (apply values (let* ([slist (string-split lang-line)]
+                         [lenl (length slist)])
+                        (cond [(= lenl 0) (list null 'racket)]
+                              [(= lenl 1) (if (equal? (car slist) "#lang")
+                                              (list null 'racket)
+                                              (list null (string->symbol (car slist))))]
+                              [(= lenl 2) (if (equal? (car slist) "#lang")
+                                              (list null (string->symbol (cadr slist)))
+                                              (raise-syntax-error 'bad-lang
+                                                                  (format "bad lang line ~a" lang-line)))]
+                              [(= lenl 3) (if (equal? (car slist) "#lang")
+                                              (list (string->symbol (cadr slist)) (string->symbol (caddr slist)))
+                                              (raise-syntax-error 'bad-lang
+                                                                  (format "bad lang line ~a" lang-line)))]
+                              [else (raise-syntax-error 'bad-lang (format "bad lang line ~a" lang-line))]))))
+  (make-evaluator lang))
 
 
 ;; ============================================================
@@ -59,13 +76,13 @@
 (module+ main
   (require racket/cmdline)
   (command-line
-   #:args (config-file-path)
-   (start-kernel config-file-path)))
+   #:args (config-file-path  lang-line)
+   (start-kernel config-file-path lang-line)))
 
 ;; ============================================================
 ;; Old kernel invocation interface
 
 (provide main)
-(define (main config-file-path)
+(define (main config-file-path lang-line)
   (eprintf "Notice: IRacket kernel started through old interface.\n")
-  (start-kernel config-file-path))
+  (start-kernel config-file-path lang-line))
