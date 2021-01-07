@@ -9,11 +9,13 @@
          "private/kernel.rkt"
          "private/jupyter.rkt")
 
-(define (start-kernel config-file-path)
+(define (start-kernel trusted-sandbox config-file-path)
   ;; Jupyter hides stdout, but prints stderr, so use eprintf for debugging.
   (eprintf "Kernel starting.\n")
   (define cfg (with-input-from-file config-file-path read-config))
-  (define evaluator (call-with-kernel-sandbox-configuration make-racket-evaluator))
+  (define evaluator (if trusted-sandbox
+                      (call-with-trusted-sandbox-configuration make-racket-evaluator)
+                      (call-with-kernel-sandbox-configuration make-racket-evaluator)))
   (run-kernel cfg
               (lambda (services)
                 (hasheq 'kernel_info_request (lambda (msg) kernel-info)
@@ -82,9 +84,12 @@
 
 (module+ main
   (require racket/cmdline)
+  (define trusted-sandbox (make-parameter #f))
   (command-line
+   #:once-each
+   [("-t" "--trusted") "Create a trusted sandbox" (trusted-sandbox #t)]
    #:args (config-file-path)
-   (start-kernel config-file-path)))
+   (start-kernel (trusted-sandbox) config-file-path)))
 
 ;; ============================================================
 ;; Old kernel invocation interface
@@ -92,4 +97,4 @@
 (provide main)
 (define (main config-file-path)
   (eprintf "Notice: IRacket kernel started through old interface.\n")
-  (start-kernel config-file-path))
+  (start-kernel #f config-file-path))
