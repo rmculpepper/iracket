@@ -14,7 +14,7 @@
   (eprintf "Kernel starting.\n")
   (define cfg (with-input-from-file config-file-path read-config))
   (define evaluator (if trusted-sandbox
-                      (call-with-trusted-sandbox-configuration make-racket-evaluator)
+                      (call-with-kernel-trusted-sandbox-configuration make-racket-evaluator)
                       (call-with-kernel-sandbox-configuration make-racket-evaluator)))
   (run-kernel cfg
               (lambda (services)
@@ -45,6 +45,28 @@
                  [sandbox-memory-limit  #f] ;; default = 30 (MB)
                  [sandbox-eval-limits   #f] ;; default = '(30 20) (sec,MB)
                  ;; -- Not set by call/trusted:
+                 [sandbox-gui-available #f] ;; GUI makes no sense for Jupyter kernel
+                 [sandbox-propagate-exceptions #f] ;; default = #t -- FIXME?
+                 [sandbox-namespace-specs (cons sandbox-make-namespace '(file/convertible))]
+                 [sandbox-path-permissions '((read "/"))])
+    (proc)))
+
+(define (call-with-kernel-trusted-sandbox-configuration proc)
+  (parameterize (;; -- Same as default:
+                 ;; [sandbox-propagate-breaks #t]
+                 ;; [sandbox-override-collection-paths '()]
+                 ;; [sandbox-make-logger current-logger]
+                 ;; [sandbox-eval-handlers (list #f call-with-custodian-shutdown)]
+                 ;; -- Retain default, because trusted is too relaxed:
+                 [sandbox-security-guard      (current-security-guard)] 
+                 ;; [sandbox-exit-handler        _] ;; trusted = (exit-handler)
+                 ;; [sandbox-make-inspector      _] ;; trusted = current-inspector
+                 ;; [sandbox-make-code-inspector _] ;; trusted = current-code-inspector
+                 ;; [sandbox-make-plumber 'propagate] ;; trusted = current-plumber
+                 ;; [sandbox-make-environment-variables *copy*] ;; trusted = current-environment-variables
+                 ;; -- Same as trusted:
+                 [sandbox-memory-limit  #f] ;; default = 30 (MB)
+                 [sandbox-eval-limits   #f] ;; default = '(30 20) (sec,MB)
                  [sandbox-gui-available #f] ;; GUI makes no sense for Jupyter kernel
                  [sandbox-propagate-exceptions #f] ;; default = #t -- FIXME?
                  [sandbox-namespace-specs (cons sandbox-make-namespace '(file/convertible))]
