@@ -35,7 +35,10 @@
 
 (define (get-jupyter-exe [fail-ok? #f])
   (or (*use-jupyter-exe*)
-      (find-executable-path "jupyter")
+      (find-executable-path
+       (case (system-type 'os)
+         [(windows) "jupyter.exe"]
+         [else "jupyter"]))
       (if fail-ok? #f (raise-user-error "Cannot find jupyter executable."))))
 
 (define (get-jupyter-dir [fail-ok? #f])
