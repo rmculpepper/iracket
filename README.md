@@ -11,7 +11,9 @@ interactive notebook-style programming with Racket.
 * [ZeroMQ](http://zeromq.org)
   - on Debian/Ubuntu Linux: install the `libzmq5` package
   - on RedHat/Fedora (Linux): install the `zeromq` package
-  - on MacOS with Homebrew: run `brew install zmq`
+  - on MacOS with Homebrew: 
+    - run `brew install zmq`
+    - run `zsh -c 'a=(/usr/local/Cellar/zeromq/*/lib/libzmq.5.dylib(om)) ; for d in /Applications/Racket*/lib/ ; do ; cp -v ${a[1]} "$d" ; done'`
   - on Windows, automatically installed by Racket's `zeromq-r-lib` package
   - for other systems, see http://zeromq.org
 
