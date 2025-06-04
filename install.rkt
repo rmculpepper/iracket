@@ -17,7 +17,8 @@
  (contract-out
   [install-iracket!
    (->* [] [#:jupyter-exe (or/c #f (and/c path-string? complete-path?))
-            #:racket-exe (or/c 'auto 'this-version path-string?)]
+            #:racket-exe (or/c 'auto 'this-version path-string?)
+            #:trusted? boolean?]
         void?)]
   [check-iracket
    (->* [] [#:jupyter-exe (or/c #f (and/c path-string? complete-path?))]
@@ -137,6 +138,7 @@
 
 (define (cmd:install args)
   (define racket-command 'auto)
+  (define trusted? #f)
   (command-line
    #:program (short-program+command-name)
    #:argv args
@@ -144,6 +146,13 @@
    [("--jupyter-exe") jupyter
     "Use given jupyter executable"
     (*use-jupyter-exe* jupyter)]
+   #:once-any
+   [("--untrusted")
+    "(Default) Kernel runs in untrusted mode (restricted filesystem, no network)"
+    (set! trusted? #f)]
+   [("--trusted")
+    "Kernel runs with full access to filesystem and network"
+    (set! trusted? #t)]
    #:help-labels
    "Selecting the `racket` command that Jupyter will use to run the kernel:"
    #:once-any
@@ -159,36 +168,44 @@
    #:help-labels
    "Meta options:"
    #:args ()
-   (do-install-iracket! racket-command)))
+   (do-install-iracket! racket-command trusted?)))
 
 (define (install-iracket! #:jupyter-exe [jupyter-exe #f]
-                          #:racket-exe [racket-exe #f])
+                          #:racket-exe [racket-exe 'auto]
+                          #:trusted? [trusted? #f])
   (parameterize ((*use-jupyter-exe* jupyter-exe))
-    (do-install-iracket! racket-exe)))
+    (do-install-iracket! racket-exe trusted?)))
 
-(define (do-install-iracket! [racket-exe #f])
+(define (do-install-iracket! racket-exe trusted?)
   (let ([racket-exe (resolve-racket-exe racket-exe)])
-    (write-iracket-kernel-json! racket-exe)
+    (write-iracket-kernel-json! racket-exe trusted?)
     (for ([file (in-list other-static-files)])
       (define dest-file (build-path (get-racket-kernel-dir) (file-name-from-path file)))
       (copy-file file dest-file #t))
     (put-pref 'installed (list (path->string (get-jupyter-dir))))))
 
-(define (write-iracket-kernel-json! racket-exe)
+(define (write-iracket-kernel-json! racket-exe trusted?)
   (define racket-kernel-dir (get-racket-kernel-dir))
   (make-directory* racket-kernel-dir)
-  (define kernel-json (make-kernel-json racket-exe))
+  (define kernel-json (make-kernel-json racket-exe trusted?))
   (define dest-file (build-path racket-kernel-dir "kernel.json"))
   (when (file-exists? dest-file)
     (printf "Replacing old ~s\n" (path->string dest-file)))
   (with-output-to-file dest-file #:exists 'replace
     (lambda () (write-json kernel-json)))
-  (printf "Kernel installed in ~s\n" (path->string racket-kernel-dir)))
+  (printf "Kernel installed in ~s\n" (path->string racket-kernel-dir))
+  (cond [trusted?
+         (printf "Racket will run in trusted mode: full access to filesystem and network.\n")]
+        [else
+         (printf "Racket will run in untrusted mode: restricted filesystem, no network.\n")
+         (printf "To install kernel in trusted mode, use `--trusted` option.\n")]))
 
-(define (make-kernel-json racket-exe)
+(define (make-kernel-json racket-exe trusted?)
   (hash 'argv `(,(path->string racket-exe)
                 "-l" "iracket/iracket"
-                "--" "{connection_file}")
+                "--"
+                ,@(if trusted? '("--trusted") '())
+                "{connection_file}")
         'display_name "Racket"
         'language "racket"))
 
