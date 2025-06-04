@@ -4,7 +4,7 @@
           scribble/basic
           (for-label racket/base racket/contract iracket/install))
 
-@title{IRacket: Racket Kernel for Jupyter}
+@title[#:version "1.3"]{IRacket: Racket Kernel for Jupyter}
 @author[@author+email["Ryan Culpepper" "ryanc@racket-lang.org"]]
 
 This library provides a Racket kernel for @hyperlink["http://jupyter.org/"]{Jupyter},
@@ -20,9 +20,14 @@ iracket install} command or by using the @racketmodname[iracket/install] module.
 If @exec{racket} and @exec{jupyter} are both in your executable search
 path, then you can register the kernel by either of the following:
 @itemlist[
-@item{at the command line: @exec{raco iracket install}, or}
-@item{in Racket: @racket[(begin (require iracket/install) (install-iracket!))]}
+@item{at the command line: @exec{raco iracket install --untrusted}, or}
+@item{in Racket: @racket[(begin (require iracket/install) (install-iracket! #:trusted? #f))]}
 ]
+If the kernel is installed in untrusted mode (@exec{--untrusted}, also the
+default), the kernel runs Racket programs in a restricted environment that
+limits filesystem access and forbids network access.  If the kernel is installed
+in trusted mode (with the @exec{--trusted} flag), then the kernel will run
+Racket programs without any restrictions.
 
 If the @exec{jupyter} command is not in your executable search path, you must
 tell the installer the absolute path to the @exec{jupyter} executable using
@@ -48,7 +53,8 @@ new version, this typically results in an error like ``collection not found for
 module path: @racketmodname[(lib "iracket/iracket")]''. The same error will
 occur if you try to run the kernel after removing the @tt{iracket} package.
 
-@history[#:changed "1.1" @elem{Added @exec{raco iracket} command.}]
+@history[#:changed "1.1" @elem{Added @exec{raco iracket} command.}
+         #:changed "1.3" @elem{Added @exec{--trusted} and @exec{--untrusted} flags.}]
 
 @subsection[#:tag "install-api"]{IRacket Installation API}
 
@@ -57,7 +63,8 @@ occur if you try to run the kernel after removing the @tt{iracket} package.
 @defproc[(install-iracket! [#:jupyter-exe jupyter-exe
                             (or/c (and/c path-string? complete-path?) #f) #f]
                            [#:racket-exe racket-exe
-                            (or/c path-string? 'auto 'this-version) #f])
+                            (or/c path-string? 'auto 'this-version) #f]
+                           [#:trusted? trusted? boolean? #f])
          void?]{
 
 Registers the IRacket kernel in the location reported by @racket[jupyter-exe]
@@ -69,7 +76,12 @@ included in the current executable search path; otherwise, an error is
 raised. If @racket[racket-exe] is @racket['this-version], then the absolute path
 to the currently running version of Racket is used.
 
-@history[#:added "1.1"]
+If @racket[trusted?] is false (the default), then the kernel runs Racket
+programs in a restricted environment that limits filesystem access and forbids
+network access.  If @racket[trusted?] is true, then the kernel will run Racket
+programs without any restrictions.
+
+@history[#:added "1.1" #:changed "1.3" @elem{Added @racket[#:trusted?] argument.}]
 }
 
 
